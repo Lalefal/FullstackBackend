@@ -1,29 +1,59 @@
 const express = require("express")
 const app = express()
-app.use(express.json())
+const morgan = require("morgan")
 
-const PORT = 3001
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+app.use(express.json())
+app.use(morgan('oma'))
+// morgan.token("req-body", req => JSON.stringify(req.body))
+// app.use(
+//   morgan(
+//     ":method :url :status :res[content-length] - :response-time ms :req-body"
+//   )
+// )
+
+//GET /
+app.get("/", (request, response) => {
+  response.send("<h1>Tervetuloa Puhelinluetteloon</h1>" )
 })
 
-const generateId = () => Math.floor(Math.random() * 100)
+//GET /info
+app.get("/info", (request, response) => {
+  const text = `<p>Hard coded Phonebook has info for ${
+    persons.length
+  } people</p>\n<p>${new Date()} </p>`
+  response.send(text)
+})
 
+//GET api/persons
+app.get("/api/persons", (request, response) => {
+  response.json(persons)
+})
+
+//GET api/persons/:id
+app.get("/api/persons/:id", (request, response) => {
+  const id = Number(request.params.id)
+  const person = persons.find(person => person.id === id)
+
+  person ? response.json(person) : response.status(404).end()
+})
+
+//POST create a person
+const generateId = () => Math.floor(Math.random() * 100)
 app.post("/api/persons", (request, response) => {
-    const body = request.body
-    const nameExits = persons.find(person => person.name === body.name)
+  const body = request.body
+  const nameExits = persons.find(person => person.name === body.name)
 
   if (!body.name) {
     return response.status(400).json({
-      error: "Name missing"
+      error: "Name missing",
     })
   } else if (nameExits) {
-      return response.status(400).json({
-      error: "Name already exists on phonebook"
-      })
+    return response.status(400).json({
+      error: "Name already exists on phonebook",
+    })
   } else if (!body.number) {
     return response.status(400).json({
-      error: "Number missing"
+      error: "Number missing",
     })
   }
 
@@ -37,35 +67,22 @@ app.post("/api/persons", (request, response) => {
   response.json(person)
 })
 
-app.get("/", (request, response) => {
-  response.send("<h1>Tervetuloa Puhelinluetteloon</h1>")
-})
-
-app.get("/info", (request, response) => {
-  //   const amount = persons.length
-  //   const date = new Date()
-  const text = `<p>Phonebook has info for ${
-    persons.length
-  } people</p>\n<p>${new Date()} </p>`
-  response.send(text)
-})
-
-app.get("/api/persons", (request, response) => {
-  response.json(persons)
-})
-
-app.get("/api/persons/:id", (request, response) => {
-  const id = Number(request.params.id)
-  const person = persons.find(person => person.id === id)
-
-  person ? response.json(person) : response.status(404).end()
-})
-
+//DELETE by id
 app.delete("/api/persons/:id", (request, response) => {
   const id = Number(request.params.id)
   persons = persons.filter(person => person.id !== id)
 
   response.status(204).end()
+})
+
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: "unknown endpoint" })
+}
+app.use(unknownEndpoint)
+
+const PORT = 3001
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
 })
 
 let persons = [
