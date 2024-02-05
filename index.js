@@ -7,18 +7,65 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
 
+const generateId = () => Math.floor(Math.random() * 100)
+
+app.post("/api/persons", (request, response) => {
+    const body = request.body
+    const nameExits = persons.find(person => person.name === body.name)
+
+  if (!body.name) {
+    return response.status(400).json({
+      error: "Name missing"
+    })
+  } else if (nameExits) {
+      return response.status(400).json({
+      error: "Name already exists on phonebook"
+      })
+  } else if (!body.number) {
+    return response.status(400).json({
+      error: "Number missing"
+    })
+  }
+
+  const person = {
+    name: body.name,
+    number: body.number,
+    id: generateId(),
+  }
+
+  persons = persons.concat(person)
+  response.json(person)
+})
+
 app.get("/", (request, response) => {
   response.send("<h1>Tervetuloa Puhelinluetteloon</h1>")
 })
 
 app.get("/info", (request, response) => {
-  const amount = persons.length
-  const text = `<p>Phonebook has info for ${amount} people</p>\n<p>testi322</p>`
+  //   const amount = persons.length
+  //   const date = new Date()
+  const text = `<p>Phonebook has info for ${
+    persons.length
+  } people</p>\n<p>${new Date()} </p>`
   response.send(text)
 })
 
 app.get("/api/persons", (request, response) => {
   response.json(persons)
+})
+
+app.get("/api/persons/:id", (request, response) => {
+  const id = Number(request.params.id)
+  const person = persons.find(person => person.id === id)
+
+  person ? response.json(person) : response.status(404).end()
+})
+
+app.delete("/api/persons/:id", (request, response) => {
+  const id = Number(request.params.id)
+  persons = persons.filter(person => person.id !== id)
+
+  response.status(204).end()
 })
 
 let persons = [
