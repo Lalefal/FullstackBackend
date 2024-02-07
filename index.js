@@ -3,10 +3,10 @@ const app = express()
 const cors = require("cors")
 const morgan = require("morgan")
 
-app.use(express.json())
-app.use(express.static("dist"))
 app.use(cors())
+app.use(express.json())
 app.use(morgan("oma"))
+app.use(express.static("dist"))
 
 //GET /
 app.get("/", (request, response) => {
@@ -39,6 +39,7 @@ const generateId = () => Math.floor(Math.random() * 100)
 app.post("/api/persons", (request, response) => {
   const body = request.body
   const nameExists = persons.find(person => person.name === body.name)
+  console.log(request.body)
 
   if (!body.name) {
     return response.status(400).json({
