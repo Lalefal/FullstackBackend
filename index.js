@@ -1,5 +1,7 @@
+require("dotenv").config()
 const express = require("express")
 const app = express()
+const Person = require("./models/person")
 const cors = require("cors")
 const morgan = require("morgan")
 
@@ -23,47 +25,71 @@ app.get("/info", (request, response) => {
 
 //GET api/persons
 app.get("/api/persons", (request, response) => {
-  response.json(persons)
+  Person.find({}).then(persons => {
+    response.json(persons)
+  })
 })
+//   response.json(persons)
+// })
 
 //GET api/persons/:id
 app.get("/api/persons/:id", (request, response) => {
-  const id = Number(request.params.id)
-  const person = persons.find(person => person.id === id)
+  Person.findById(request.params.id).then(person => {
+    response.json(person)
+  })
+  // const id = Number(request.params.id)
+  // const person = persons.find(person => person.id === id)
 
-  person ? response.json(person) : response.status(404).end()
+  // person ? response.json(person) : response.status(404).end()
 })
 
 //POST create a person
-const generateId = () => Math.floor(Math.random() * 100)
 app.post("/api/persons", (request, response) => {
   const body = request.body
-  const nameExists = persons.find(person => person.name === body.name)
-  console.log(request.body)
 
-  if (!body.name) {
-    return response.status(400).json({
-      error: "Name missing",
-    })
-  } else if (nameExists) {
-    return response.status(400).json({
-      error: "Name already exists on phonebook",
-    })
-  } else if (!body.number) {
-    return response.status(400).json({
-      error: "Number missing",
-    })
+  if (!body.name) { //(body.name === undefined) {
+    return response.status(400).json({ error: "name missing" })
   }
 
-  const person = {
+  const person = new Person({
     name: body.name,
     number: body.number,
-    id: generateId(),
-  }
+  })
 
-  persons = persons.concat(person)
-  response.json(person)
+  person.save().then(savedPerson => {
+    response.json(savedPerson)
+  })
 })
+
+// const generateId = () => Math.floor(Math.random() * 100)
+// app.post("/api/persons", (request, response) => {
+//   const body = request.body
+//   const nameExists = persons.find(person => person.name === body.name)
+//   console.log(request.body)
+
+//   if (!body.name) {
+//     return response.status(400).json({
+//       error: "Name missing",
+//     })
+//   } else if (nameExists) {
+//     return response.status(400).json({
+//       error: "Name already exists on phonebook",
+//     })
+//   } else if (!body.number) {
+//     return response.status(400).json({
+//       error: "Number missing",
+//     })
+//   }
+
+//   const person = {
+//     name: body.name,
+//     number: body.number,
+//     id: generateId(),
+//   }
+
+//   persons = persons.concat(person)
+//   response.json(person)
+// })
 
 //DELETE by id
 app.delete("/api/persons/:id", (request, response) => {
@@ -80,7 +106,7 @@ const unknownEndpoint = (request, response) => {
 app.use(unknownEndpoint)
 
 //PORT
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT // || 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
@@ -112,3 +138,9 @@ let persons = [
     id: 4,
   },
 ]
+
+//3.12 tietokanta komentoriviltä, luo MongoDB, mongo.js
+//3.13 backend hakee näytettävät puhelintiedot tietokannasta
+//      Mongoose-spesifinen koodi omaan moduuliinsa
+//3.14 Muuta backendiä siten, että uudet numerot tallennetaan tietokantaan
+//    voit olla välittämättä siitä, onko tietokannassa jo henkilöä, jolla on sama nimi kuin lisättävällä
