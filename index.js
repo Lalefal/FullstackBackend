@@ -21,33 +21,34 @@ app.get("/info", (request, response) => {
     persons.length
   } people</p>\n<p>${new Date()} </p>`
   response.send(text)
-})
+}) //unkownEndpoint
 
 //GET api/persons
 app.get("/api/persons", (request, response) => {
   Person.find({}).then(persons => {
     response.json(persons)
   })
-})
-//   response.json(persons)
-// })
+}) //unkownEndpoint
 
 //GET api/persons/:id
-app.get("/api/persons/:id", (request, response) => {
-  Person.findById(request.params.id).then(person => {
-    response.json(person)
-  })
-  // const id = Number(request.params.id)
-  // const person = persons.find(person => person.id === id)
-
-  // person ? response.json(person) : response.status(404).end()
+app.get("/api/persons/:id", (request, response, next) => {
+  Person.findById(request.params.id)
+    .then(person => {
+      if (person) {
+        response.json(person)
+      } else {
+        response.status(404).end() //kun mennään jo poistettuun id:hen / id:hen, jota ei ole
+      }
+    })
+    .catch(error => next(error)) //"malformatted id" Id väärässä muodossa -> liian lyhyt / pitkä
 })
 
 //POST create a person
-app.post("/api/persons", (request, response) => {
+app.post("/api/persons", (request, response, next) => {
   const body = request.body
 
-  if (!body.name) { //(body.name === undefined) {
+  if (!body.name) {
+    //(body.name === undefined) { //tämä tallensi ilman nimeä
     return response.status(400).json({ error: "name missing" })
   }
 
@@ -56,47 +57,39 @@ app.post("/api/persons", (request, response) => {
     number: body.number,
   })
 
-  person.save().then(savedPerson => {
-    response.json(savedPerson)
-  })
+  person
+    .save()
+    .then(savedPerson => {
+      response.json(savedPerson)
+    })
+    .catch(error => next(error))
 })
 
-// const generateId = () => Math.floor(Math.random() * 100)
-// app.post("/api/persons", (request, response) => {
-//   const body = request.body
-//   const nameExists = persons.find(person => person.name === body.name)
-//   console.log(request.body)
+//PUT => update, jos annettu nimi jo olemassa > numeron muutos
+app.put("/api/persons/:id", (request, response, next) => {
+  const body = request.body
 
-//   if (!body.name) {
-//     return response.status(400).json({
-//       error: "Name missing",
-//     })
-//   } else if (nameExists) {
-//     return response.status(400).json({
-//       error: "Name already exists on phonebook",
-//     })
-//   } else if (!body.number) {
-//     return response.status(400).json({
-//       error: "Number missing",
-//     })
-//   }
+  const person = {
+    name: body.name,
+    number: body.number,
+  }
 
-//   const person = {
-//     name: body.name,
-//     number: body.number,
-//     id: generateId(),
-//   }
-
-//   persons = persons.concat(person)
-//   response.json(person)
-// })
+  Person.findOneAndUpdate({ _id: request.params.id, name: body.name }, person, {
+    new: true,
+  })
+    .then(updatedPerson => {
+      response.json(updatedPerson)
+    })
+    .catch(error => next(error))
+})
 
 //DELETE by id
-app.delete("/api/persons/:id", (request, response) => {
-  const id = Number(request.params.id)
-  persons = persons.filter(person => person.id !== id)
-
-  response.status(204).end()
+app.delete("/api/persons/:id", (request, response, next) => {
+  Person.findByIdAndDelete(request.params.id)
+    .then(result => {
+      response.status(204).end() //204 NoContent
+    })
+    .catch(error => next(error))
 })
 
 //unknownEndpoint
@@ -105,15 +98,28 @@ const unknownEndpoint = (request, response) => {
 }
 app.use(unknownEndpoint)
 
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+
+  if (error.name === "CastError") {
+    return response.status(400).send({ error: "malformatted id" })
+  }
+  //Jos tarve käsitellä joitakin erityisiä virheitä eri tavalla, lisää niiden käsittely tänne
+  // } else if (error.name === "MongoNetworkError") {
+  //   return response
+  //     .status(500)
+  //     .json({ error: "Database error: Connection failed" })
+  // } // tietokantayhteyden aiheuttama virhe
+
+  next(error)
+}
+app.use(errorHandler)
+
 //PORT
 const PORT = process.env.PORT // || 3001
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
-// const PORT = 3001
-// app.listen(PORT, () => {
-//   console.log(`Server running on port ${PORT}`)
-// })
 
 //Persons
 let persons = [
@@ -144,3 +150,38 @@ let persons = [
 //      Mongoose-spesifinen koodi omaan moduuliinsa
 //3.14 Muuta backendiä siten, että uudet numerot tallennetaan tietokantaan
 //    voit olla välittämättä siitä, onko tietokannassa jo henkilöä, jolla on sama nimi kuin lisättävällä
+//3.15 numerotietojen poistaminen tietokannasta
+//3.16 virheiden käsittely middlewarella
+//3.17 jos annettu nimi jo olemassa (ja window confirm) > numeron muutos
+//3.18 päivitä polkujen api/persons/:id ja info käsittely
+
+
+// const generateId = () => Math.floor(Math.random() * 100)
+// app.post("/api/persons", (request, response) => {
+//   const body = request.body
+//   const nameExists = persons.find(person => person.name === body.name)
+//   console.log(request.body)
+
+//   if (!body.name) {
+//     return response.status(400).json({
+//       error: "Name missing",
+//     })
+//   } else if (nameExists) {
+//     return response.status(400).json({
+//       error: "Name already exists on phonebook",
+//     })
+//   } else if (!body.number) {
+//     return response.status(400).json({
+//       error: "Number missing",
+//     })
+//   }
+
+//   const person = {
+//     name: body.name,
+//     number: body.number,
+//     id: generateId(),
+//   }
+
+//   persons = persons.concat(person)
+//   response.json(person)
+// })
