@@ -10,11 +10,6 @@ app.use(express.json())
 app.use(morgan("oma"))
 app.use(express.static("dist"))
 
-//GET /
-app.get("/", (request, response) => {
-  response.send("<h1>Tervetuloa Puhelinluetteloon</h1>")
-})
-
 //GET /info
 app.get("/info", (request, response) => {
   const text = `<p>Hard coded Phonebook has info for ${
@@ -47,11 +42,6 @@ app.get("/api/persons/:id", (request, response, next) => {
 app.post("/api/persons", (request, response, next) => {
   const body = request.body
 
-  if (!body.name) {
-    //(body.name === undefined) { //tämä tallensi ilman nimeä
-    return response.status(400).json({ error: "name missing" })
-  }
-
   const person = new Person({
     name: body.name,
     number: body.number,
@@ -65,18 +55,15 @@ app.post("/api/persons", (request, response, next) => {
     .catch(error => next(error))
 })
 
-//PUT => update, jos annettu nimi jo olemassa > numeron muutos
+//PUT update, if name exists > change number
 app.put("/api/persons/:id", (request, response, next) => {
-  const body = request.body
+  const { name, number } = request.body
 
-  const person = {
-    name: body.name,
-    number: body.number,
-  }
-
-  Person.findOneAndUpdate({ _id: request.params.id, name: body.name }, person, {
-    new: true,
-  })
+  Person.findOneAndUpdate(
+    { _id: request.params.id },
+    { name, number },
+    { new: true, runValidators: true, context: "query" }
+  )
     .then(updatedPerson => {
       response.json(updatedPerson)
     })
@@ -103,20 +90,23 @@ const errorHandler = (error, request, response, next) => {
 
   if (error.name === "CastError") {
     return response.status(400).send({ error: "malformatted id" })
+  } else if (error.name === "ValidationError") {
+    return response.status(400).json({ error: error.message })
   }
-  //Jos tarve käsitellä joitakin erityisiä virheitä eri tavalla, lisää niiden käsittely tänne
-  // } else if (error.name === "MongoNetworkError") {
-  //   return response
-  //     .status(500)
-  //     .json({ error: "Database error: Connection failed" })
-  // } // tietokantayhteyden aiheuttama virhe
 
   next(error)
 }
+
 app.use(errorHandler)
+//Jos tarve käsitellä joitakin erityisiä virheitä eri tavalla, lisää niiden käsittely tänne
+// } else if (error.name === "MongoNetworkError") {
+//   return response
+//     .status(500)
+//     .json({ error: "Database error: Connection failed" })
+// } // tietokantayhteyden aiheuttama virhe
 
 //PORT
-const PORT = process.env.PORT // || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
@@ -154,7 +144,10 @@ let persons = [
 //3.16 virheiden käsittely middlewarella
 //3.17 jos annettu nimi jo olemassa (ja window confirm) > numeron muutos
 //3.18 päivitä polkujen api/persons/:id ja info käsittely
-
+//3.19 tietokantaan talletettavan nimen on oltava pituudeltaan vähintään kolme merkkiä,
+//    Laajenna sovelluksen frontendia siten, että se antaa jonkinlaisen virheilmoituksen validoinnin epäonnistuessa.
+//3.20 Toteuta validaatio: backendiin voi tallettaa ainoastaan oikeassa muodossa olevia puhelinnumeroita
+//3.21 tietokantaa käyttävä versio Internetiin
 
 // const generateId = () => Math.floor(Math.random() * 100)
 // app.post("/api/persons", (request, response) => {
