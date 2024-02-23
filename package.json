@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:ui": "@powershell Remove-Item -Recurse dist && cd ../fullstack/osa2/puhelinluettelo && npm run build && @powershell cp -r dist ~/osa3",
     "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push"
@@ -20,6 +21,8 @@
     "morgan": "^1.10.0"
   },
   "devDependencies": {
+    "@stylistic/eslint-plugin-js": "^1.6.2",
+    "eslint": "^8.56.0",
     "nodemon": "^3.0.3"
   }
 }
